@@ -1,0 +1,46 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model rooms {
+  id          Int           @id @default(autoincrement())
+  userId      Int
+  nameRoom    String
+  createdAt   DateTime      @default(dbgenerated("'2023-01-28'::date")) @db.Date
+  isPrivate   Boolean       @default(true)
+  users       users         @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  usersByRoom usersByRoom[]
+}
+
+model tokens {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique @db.Uuid
+  userId    Int
+  createdAt DateTime @default(dbgenerated("'2023-01-28'::date")) @db.Date
+  users     users    @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model users {
+  id          Int           @id @default(autoincrement())
+  name        String
+  email       String        @unique
+  password    String
+  createdAt   DateTime      @default(now()) @db.Date
+  rooms       rooms[]
+  tokens      tokens[]
+  usersByRoom usersByRoom[]
+}
+
+model usersByRoom {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  roomId    Int
+  createdAt DateTime @default(dbgenerated("'2023-01-28'::date")) @db.Date
+  rooms     rooms    @relation(fields: [roomId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users     users    @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}

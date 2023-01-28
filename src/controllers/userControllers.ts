@@ -1,9 +1,11 @@
 import { Response, Request } from 'express';
 import { NewUser, User, Token } from '../types/userTypes.js';
 import { userSchema, userLoginSchema } from '../models/userModels.js';
-import { connectionDb } from '../database/db.js';
+import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import { v4 as uuid } from 'uuid';
+
+const prisma = new PrismaClient();
 
 
 
