@@ -1,7 +1,8 @@
 import { Request, Response } from "express";
-import { Token, User } from "../types/userTypes.js";
-import { connectionDb } from "../database/db.js";
+import { Token, User } from "../protocols/userProtocols.js";
+import { PrismaClient } from "@prisma/client";
 
+const prisma = new PrismaClient();
 
 export async function authMiddleware(req: Request, res: Response, next: any) {
     const token = (req.headers.authorization?.replace('Bearer ', ''))?.trim();
@@ -10,15 +11,27 @@ export async function authMiddleware(req: Request, res: Response, next: any) {
         return;
     }
     try {
-        const isToken = await connectionDb.query<Token>(`SELECT * FROM tokens WHERE token = $1;`, [token]);
-        if (isToken.rowCount === 0) {
+        const isToken = await prisma.tokens.findUnique({
+            where: {
+                token: token,
+            },
+        });
+        if (!isToken) {
             res.sendStatus(401);
             return;
         }
 
-        const user = await connectionDb.query<User>(`SELECT * FROM users WHERE id = $1;`, [isToken.rows[0].userId]);
+        const user = await prisma.users.findUnique({
+            where: {
+                id: isToken.userId,
+            },
+        });
+        if (!user) {
+            res.sendStatus(401);
+            return;
+        }
 
-        res.locals.id = user.rows[0].id;
+        res.locals.id = user.id;
         next();
     } catch (err) {
         res.sendStatus(500);

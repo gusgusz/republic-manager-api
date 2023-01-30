@@ -14,6 +14,7 @@ model rooms {
   createdAt   DateTime      @default(dbgenerated("'2023-01-28'::date")) @db.Date
   isPrivate   Boolean       @default(true)
   users       users         @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tasks       tasks[]
   usersByRoom usersByRoom[]
 }
 
@@ -32,6 +33,7 @@ model users {
   password    String
   createdAt   DateTime      @default(now()) @db.Date
   rooms       rooms[]
+  tasks       tasks[]
   tokens      tokens[]
   usersByRoom usersByRoom[]
 }
@@ -40,6 +42,18 @@ model usersByRoom {
   id        Int      @id @default(autoincrement())
   userId    Int
   roomId    Int
+  createdAt DateTime @default(dbgenerated("'2023-01-28'::date")) @db.Date
+  rooms     rooms    @relation(fields: [roomId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users     users    @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model tasks {
+  id        Int      @id @default(autoincrement())
+  roomId    Int
+  userId    Int
+  nameTask  String
+  isDone    Boolean  @default(false)
+  dueDate   DateTime @db.Date
   createdAt DateTime @default(dbgenerated("'2023-01-28'::date")) @db.Date
   rooms     rooms    @relation(fields: [roomId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   users     users    @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)

@@ -1,9 +1,10 @@
 import { Response, Request } from 'express';
-import { NewUser, User, Token } from '../types/userTypes.js';
+import { NewUser, User, Token } from '../protocols/userProtocols.js';
 import { userSchema, userLoginSchema } from '../models/userModels.js';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import { v4 as uuid } from 'uuid';
+import { userRepositories } from '../repositories/userRepositories.js';
 
 const prisma = new PrismaClient();
 
@@ -20,11 +21,11 @@ export async function newUser(req: Request, res: Response) {
     const hashPassword : string = bcrypt.hashSync(password, 10);
 
     try{
-       await connectionDb.query<NewUser>(`INSERT INTO users (name, email, password, "createdAt") VALUES ($1, $2, $3, $4);`, [name, email, hashPassword, createdAt]);
-         res.status(201).json('User created');
+       await userRepositories.newUser({name, email, password: hashPassword, createdAt});
+        res.sendStatus(201);
          return;
     }catch(err){ 
-        if(err.message.includes("users_email_key")){
+        if(err.message.includes("Unique constraint failed on the fields: (`email`)")){
             res.status(409).json('Email already exists');
             return;
         }
@@ -44,31 +45,32 @@ export async function signIn(req: Request, res: Response) {
     }
     const { email, password } : User = req.body;
     try{
-    const user = await connectionDb.query<NewUser>(`SELECT * FROM users WHERE email = $1;`, [email]);
-    if(user.rowCount === 0){
+    const user = await userRepositories.getUserByEmail(email);
+    if(!user){
         res.status(404).json('User not found');
         return;
     }
-    const hashPassword : string = user.rows[0].password;
+    const hashPassword : string = user.password;
     const isPassword = bcrypt.compareSync(password, hashPassword);
     if(!isPassword){
         res.status(401).json('Invalid password');
         return;
     }
 
-    const isToken = await connectionDb.query<Token>(`SELECT * from tokens WHERE "userId" = $1;`, [user.rows[0].id]);
+    const isToken = await userRepositories.getTokenById(user.id);
   
-
-    if(isToken.rowCount !== 0){
-        res.status(200).send({token: isToken.rows[0].token});
+   
+    if(isToken.length ){
+ 
+        res.status(200).send(isToken[0].token);
         return;
     }
     
     const token = uuid();
 
-    await connectionDb.query<Token>(`INSERT INTO tokens (token, "userId", "createdAt") VALUES ($1, $2, $3);`, [token, user.rows[0].id, new Date()]);
+    await userRepositories.createToken(token,user.id);
     
-    res.status(200).send({token: token});
+    res.status(200).send(token);
     return;
     }catch(err){
         console.log(err.message);
